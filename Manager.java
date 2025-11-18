@@ -24,7 +24,6 @@ public class Manager extends Employee {
         return teamSize;
     }
 
-    @Override
     public String getRole() {
         return "Manager";
     }
