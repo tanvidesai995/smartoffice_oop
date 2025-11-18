@@ -41,13 +41,13 @@ public class ConfigManager {
 
     // Read entire log file and return it as a single String
     public String readLog() {
-        StringBuilder sb = new StringBuilder();
+        String log="";
         BufferedReader reader = null;
         try {
             reader = new BufferedReader(new FileReader(logFilePath));
             String line;
             while ((line = reader.readLine()) != null) {
-                sb.append(line).append(System.lineSeparator());
+                log += line + System.lineSeparator();
             }
         } catch (IOException e) {
             return "Could not read log file: " + e.getMessage();
@@ -56,6 +56,6 @@ public class ConfigManager {
                 try { reader.close(); } catch (IOException e) { /* ignore close error */ }
             }
         }
-        return sb.toString();
+        return log;
     }
 }
