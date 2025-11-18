@@ -16,13 +16,15 @@ import java.util.List;
 public class Room {
     private int roomId;
     private String name;
-    private List<Booking> bookings;
+    private Booking[] bookings;
+    private bookingcount;
 
     // Constructor
     public Room(int roomId, String name) {
         this.roomId = roomId;
         this.name = name;
-        this.bookings = new ArrayList<Booking>();
+        this.bookings = new Booking[10];
+        this.bookingcount=0;
     }
 
     // Overloaded constructor
@@ -45,13 +47,13 @@ public class Room {
     // Book the room (creates a Booking object)
     public Booking createBooking(String bookedBy, String timeSlot) throws BookingException {
         // Simple check: prevent duplicate timeSlot
-        for (Booking b : bookings) {
+        for (Booking b : this.bookings) {
             if (b.getTimeSlot().equals(timeSlot)) {
                 throw new BookingException("Time slot already booked: " + timeSlot);
             }
         }
         Booking b = new Booking(bookedBy, timeSlot);
-        bookings.add(b);
+        this.bookings[this.bookingcount++]= b;
         return b;
     }
 
