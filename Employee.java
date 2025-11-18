@@ -24,7 +24,6 @@ public class Employee extends Person {
         return department;
     }
 
-    @Override
     public String getRole() {
         return "Employee";
     }
