@@ -19,7 +19,7 @@ public class Admin extends Manager {
         this.superUser = false;
     }
 
-    @Override
+    
     public String getRole() {
         return "Admin";
     }
