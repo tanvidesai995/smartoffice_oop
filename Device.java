@@ -51,7 +51,6 @@ public class Device implements DeviceControllable, Loggable {
     }
 
     // Turn the device on
-    @Override
     public void turnOn() throws DeviceOperationException {
         if (isOn) {
             throw new DeviceOperationException("Device already ON: " + name);
@@ -61,7 +60,6 @@ public class Device implements DeviceControllable, Loggable {
     }
 
     // Turn the device off
-    @Override
     public void turnOff() throws DeviceOperationException {
         if (!isOn) {
             throw new DeviceOperationException("Device already OFF: " + name);
@@ -71,7 +69,6 @@ public class Device implements DeviceControllable, Loggable {
     }
 
     // Toggle the device
-    @Override
     public void toggle() throws DeviceOperationException {
         if (isOn) {
             turnOff();
@@ -81,7 +78,6 @@ public class Device implements DeviceControllable, Loggable {
     }
 
     // Loggable interface implementation
-    @Override
     public String getLogEntry() {
         return "Device[" + name + "," + type + "] state=" + (isOn ? "ON" : "OFF") + " toggles=" + toggles;
     }
@@ -106,7 +102,6 @@ public class Device implements DeviceControllable, Loggable {
         }
     }
 
-    @Override
     public String toString() {
         return getLogEntry();
     }
