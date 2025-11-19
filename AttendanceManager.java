@@ -342,4 +342,397 @@ public class AttendanceManager {
     public List<AttendanceRecord> getAllRecords() {
         return new ArrayList<AttendanceRecord>(records);
     }
+
 }
+    /**
+    Implementation without String Builder- check if should implement this
+
+
+    package smartoffice.v1;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+
+public class AttendanceManager {
+    private String attendanceCsvPath;
+    private List<AttendanceRecord> records;
+
+    public AttendanceManager(String attendanceCsvPath) {
+        this.attendanceCsvPath = attendanceCsvPath;
+        this.records = new ArrayList<AttendanceRecord>();
+        loadFromCsv();
+    }
+
+    public void recordAttendance(AttendanceRecord rec) {
+        records.add(rec);
+        appendToCsv(rec);
+    }
+
+    private void appendToCsv(AttendanceRecord rec) {
+        BufferedWriter writer = null;
+        try {
+            writer = new BufferedWriter(new FileWriter(attendanceCsvPath, true));
+            writer.write(rec.toCsvRow());
+            writer.newLine();
+            writer.flush();
+        } catch (IOException e) {
+            System.err.println("Failed to append attendance CSV: " + e.getMessage());
+        } finally {
+            if (writer != null) {
+                try { writer.close(); } catch (IOException ex) {}
+            }
+        }
+    }
+
+    private void loadFromCsv() {
+        BufferedReader reader = null;
+        try {
+            reader = new BufferedReader(new FileReader(attendanceCsvPath));
+            String line;
+            while ((line = reader.readLine()) != null) {
+                AttendanceRecord r = AttendanceRecord.fromCsvRow(line);
+                if (r != null) records.add(r);
+            }
+        } catch (IOException e) {
+            // file missing = OK
+        } finally {
+            if (reader != null) {
+                try { reader.close(); } catch (IOException ex) {}
+            }
+        }
+    }
+
+    public AttendanceRecord simulateRFIDScan(int employeeId, boolean isCheckIn) {
+        String name = lookupEmployeeNameById(employeeId);
+        if (name == null) name = "Unknown-" + employeeId;
+        AttendanceRecord rec = new AttendanceRecord(employeeId, name, "RFID", isCheckIn);
+        recordAttendance(rec);
+        return rec;
+    }
+
+    private String lookupEmployeeNameById(int id) {
+        Employee e = OfficeSystem.findEmployeeByIdStatic(id);
+        if (e != null) return e.getName();
+        return null;
+    }
+
+    public List<AttendanceRecord> getRecordsForDate(LocalDate date) {
+        List<AttendanceRecord> res = new ArrayList<AttendanceRecord>();
+        for (AttendanceRecord r : records) {
+            if (r.getTimestamp().toLocalDate().equals(date)) res.add(r);
+        }
+        return res;
+    }
+
+    public List<AttendanceRecord> getRecordsBetween(LocalDate start, LocalDate end) {
+        List<AttendanceRecord> res = new ArrayList<AttendanceRecord>();
+        for (AttendanceRecord r : records) {
+            LocalDate d = r.getTimestamp().toLocalDate();
+            if ((d.isEqual(start) || d.isAfter(start)) &&
+                (d.isEqual(end) || d.isBefore(end))) {
+                res.add(r);
+            }
+        }
+        return res;
+    }
+
+    // ========================= DAILY REPORT =============================
+    public String generateReportDaily(LocalDate date) {
+        List<AttendanceRecord> dayRecords = getRecordsForDate(date);
+
+        Map<Integer, List<AttendanceRecord>> byEmp = new HashMap<Integer, List<AttendanceRecord>>();
+        for (AttendanceRecord r : dayRecords) {
+            int id = r.getEmployeeId();
+            if (!byEmp.containsKey(id)) byEmp.put(id, new ArrayList<AttendanceRecord>());
+            byEmp.get(id).add(r);
+        }
+
+        String sb = "";
+        String header = "Daily Attendance Report for " + date.toString();
+        sb += header + System.lineSeparator();
+        sb += "empId,empName,firstCheckIn,lastCheckOut,totalHours (approx),notes" + System.lineSeparator();
+
+        String outCsv = "attendance-report-" + date.format(DateTimeFormatter.BASIC_ISO_DATE) + ".csv";
+        BufferedWriter writer = null;
+
+        try {
+            writer = new BufferedWriter(new FileWriter(outCsv));
+            writer.write("empId,empName,firstCheckIn,lastCheckOut,totalHours,notes");
+            writer.newLine();
+
+            for (Integer empId : byEmp.keySet()) {
+                List<AttendanceRecord> list = byEmp.get(empId);
+
+                Collections.sort(list, new Comparator<AttendanceRecord>() {
+                    public int compare(AttendanceRecord a, AttendanceRecord b) {
+                        return a.getTimestamp().compareTo(b.getTimestamp());
+                    }
+                });
+
+                LocalDateTime firstIn = null;
+                LocalDateTime lastOut = null;
+
+                for (AttendanceRecord ar : list) {
+                    if (ar.isCheckIn() && firstIn == null) firstIn = ar.getTimestamp();
+                    if (!ar.isCheckIn()) lastOut = ar.getTimestamp();
+                }
+
+                String notes = "";
+                double hours = 0.0;
+
+                if (firstIn != null && lastOut != null && lastOut.isAfter(firstIn)) {
+                    Duration dur = Duration.between(firstIn, lastOut);
+                    hours = dur.toMinutes() / 60.0;
+                } else {
+                    notes = "missing check-in or check-out";
+                }
+
+                String empName = list.get(0).getEmployeeName();
+                String firstStr = (firstIn == null) ? "" : firstIn.format(AttendanceRecord.FORMATTER);
+                String lastStr = (lastOut == null) ? "" : lastOut.format(AttendanceRecord.FORMATTER);
+
+                sb += empId + "," + empName + "," + firstStr + "," + lastStr + "," +
+                      String.format("%.2f", hours) + "," + notes +
+                      System.lineSeparator();
+
+                writer.write(empId + "," + escapeCsv(empName) + "," + firstStr + "," + lastStr +
+                             "," + String.format("%.2f", hours) + "," + notes);
+                writer.newLine();
+            }
+
+            writer.flush();
+
+        } catch (IOException e) {
+            sb += "Failed to write daily report CSV: " + e.getMessage() + System.lineSeparator();
+
+        } finally {
+            if (writer != null) {
+                try { writer.close(); } catch (IOException ex) {}
+            }
+        }
+
+        return sb;
+    }
+
+    // ========================= WEEKLY REPORT =============================
+    public String generateReportWeekly(LocalDate anyDateInWeek) {
+        LocalDate monday = anyDateInWeek.with(DayOfWeek.MONDAY);
+        LocalDate sunday = monday.plusDays(6);
+
+        List<AttendanceRecord> weekRecords = getRecordsBetween(monday, sunday);
+
+        Map<Integer, List<AttendanceRecord>> byEmp = new HashMap<Integer, List<AttendanceRecord>>();
+        for (AttendanceRecord r : weekRecords) {
+            int id = r.getEmployeeId();
+            if (!byEmp.containsKey(id)) byEmp.put(id, new ArrayList<AttendanceRecord>());
+            byEmp.get(id).add(r);
+        }
+
+        String sb = "";
+
+        sb += "Weekly Attendance Report for " +
+              monday.toString() + " to " + sunday.toString() +
+              System.lineSeparator();
+
+        sb += "empId,empName,daysPresent,totalHours(approx),notes" +
+              System.lineSeparator();
+
+        String outCsv = "attendance-report-week-" +
+                        monday.format(DateTimeFormatter.BASIC_ISO_DATE) + ".csv";
+
+        BufferedWriter writer = null;
+
+        try {
+            writer = new BufferedWriter(new FileWriter(outCsv));
+            writer.write("empId,empName,daysPresent,totalHours,notes");
+            writer.newLine();
+
+            for (Integer empId : byEmp.keySet()) {
+
+                List<AttendanceRecord> list = byEmp.get(empId);
+
+                Map<LocalDate, List<AttendanceRecord>> byDate =
+                    new HashMap<LocalDate, List<AttendanceRecord>>();
+
+                for (AttendanceRecord ar : list) {
+                    LocalDate d = ar.getTimestamp().toLocalDate();
+                    if (!byDate.containsKey(d)) byDate.put(d, new ArrayList<AttendanceRecord>());
+                    byDate.get(d).add(ar);
+                }
+
+                int daysPresent = byDate.size();
+                double totalHours = 0.0;
+                String notes = "";
+
+                for (LocalDate d : byDate.keySet()) {
+                    List<AttendanceRecord> dayList = byDate.get(d);
+
+                    Collections.sort(dayList, new Comparator<AttendanceRecord>() {
+                        public int compare(AttendanceRecord a, AttendanceRecord b) {
+                            return a.getTimestamp().compareTo(b.getTimestamp());
+                        }
+                    });
+
+                    LocalDateTime firstIn = null;
+                    LocalDateTime lastOut = null;
+
+                    for (AttendanceRecord ar : dayList) {
+                        if (ar.isCheckIn() && firstIn == null) firstIn = ar.getTimestamp();
+                        if (!ar.isCheckIn()) lastOut = ar.getTimestamp();
+                    }
+
+                    if (firstIn != null && lastOut != null && lastOut.isAfter(firstIn)) {
+                        totalHours += Duration.between(firstIn, lastOut).toMinutes() / 60.0;
+                    } else {
+                        notes = "some days missing check-in/out";
+                    }
+                }
+
+                String empName = list.get(0).getEmployeeName();
+
+                sb += empId + "," + empName + "," + daysPresent + "," +
+                      String.format("%.2f", totalHours) + "," + notes +
+                      System.lineSeparator();
+
+                writer.write(empId + "," + escapeCsv(empName) + "," + daysPresent +
+                             "," + String.format("%.2f", totalHours) + "," + notes);
+
+                writer.newLine();
+            }
+
+            writer.flush();
+
+        } catch (IOException e) {
+            sb += "Failed to write weekly report CSV: " + e.getMessage() +
+                  System.lineSeparator();
+
+        } finally {
+            if (writer != null) {
+                try { writer.close(); } catch (IOException ex) {}
+            }
+        }
+
+        return sb;
+    }
+
+    // ========================= MONTHLY REPORT =============================
+    public String generateReportMonthly(int year, int month) {
+        LocalDate start = LocalDate.of(year, month, 1);
+        LocalDate end = start.withDayOfMonth(start.lengthOfMonth());
+
+        List<AttendanceRecord> monthRecords = getRecordsBetween(start, end);
+
+        Map<Integer, List<AttendanceRecord>> byEmp = new HashMap<Integer, List<AttendanceRecord>>();
+        for (AttendanceRecord r : monthRecords) {
+            int id = r.getEmployeeId();
+            if (!byEmp.containsKey(id)) byEmp.put(id, new ArrayList<AttendanceRecord>());
+            byEmp.get(id).add(r);
+        }
+
+        String sb = "";
+
+        sb += "Monthly Attendance Report for " + year + "-" +
+              String.format("%02d", month) + System.lineSeparator();
+
+        sb += "empId,empName,daysPresent,totalHours(approx),notes" +
+              System.lineSeparator();
+
+        String outCsv = "attendance-report-month-" + year +
+                        String.format("%02d", month) + ".csv";
+
+        BufferedWriter writer = null;
+
+        try {
+            writer = new BufferedWriter(new FileWriter(outCsv));
+            writer.write("empId,empName,daysPresent,totalHours,notes");
+            writer.newLine();
+
+            for (Integer empId : byEmp.keySet()) {
+
+                List<AttendanceRecord> list = byEmp.get(empId);
+
+                Map<LocalDate, List<AttendanceRecord>> byDate =
+                    new HashMap<LocalDate, List<AttendanceRecord>>();
+
+                for (AttendanceRecord ar : list) {
+                    LocalDate d = ar.getTimestamp().toLocalDate();
+                    if (!byDate.containsKey(d)) byDate.put(d, new ArrayList<AttendanceRecord>());
+                    byDate.get(d).add(ar);
+                }
+
+                int daysPresent = byDate.size();
+                double totalHours = 0.0;
+                String notes = "";
+
+                for (LocalDate d : byDate.keySet()) {
+                    List<AttendanceRecord> dayList = byDate.get(d);
+
+                    Collections.sort(dayList, new Comparator<AttendanceRecord>() {
+                        public int compare(AttendanceRecord a, AttendanceRecord b) {
+                            return a.getTimestamp().compareTo(b.getTimestamp());
+                        }
+                    });
+
+                    LocalDateTime firstIn = null;
+                    LocalDateTime lastOut = null;
+
+                    for (AttendanceRecord ar : dayList) {
+                        if (ar.isCheckIn() && firstIn == null) firstIn = ar.getTimestamp();
+                        if (!ar.isCheckIn()) lastOut = ar.getTimestamp();
+                    }
+
+                    if (firstIn != null && lastOut != null && lastOut.isAfter(firstIn)) {
+                        totalHours += Duration.between(firstIn, lastOut).toMinutes() / 60.0;
+                    } else {
+                        notes = "some days missing check-in/out";
+                    }
+                }
+
+                String empName = list.get(0).getEmployeeName();
+
+                sb += empId + "," + empName + "," + daysPresent + "," +
+                      String.format("%.2f", totalHours) + "," + notes +
+                      System.lineSeparator();
+
+                writer.write(empId + "," + escapeCsv(empName) + "," +
+                             daysPresent + "," + String.format("%.2f", totalHours) +
+                             "," + notes);
+
+                writer.newLine();
+            }
+
+            writer.flush();
+
+        } catch (IOException e) {
+            sb += "Failed to write monthly report CSV: " + e.getMessage() +
+                  System.lineSeparator();
+
+        } finally {
+            if (writer != null) {
+                try { writer.close(); } catch (IOException ex) {}
+            }
+        }
+
+        return sb;
+    }
+
+    private String escapeCsv(String s) {
+        if (s.contains(",") || s.contains("\"") || s.contains("\n")) {
+            s = s.replace("\"", "\"\"");
+            return "\"" + s + "\"";
+        }
+        return s;
+    }
+
+    public List<AttendanceRecord> getAllRecords() {
+        return new ArrayList<AttendanceRecord>(records);
+    }
+}
+
+    **/
