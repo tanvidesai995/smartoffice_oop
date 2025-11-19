@@ -176,16 +176,16 @@ public class OfficeSystem {
 
     // Seed initial demo data (uses addRoom/addDevice/addEmployee)
     private static void seedData() {
-        addRoom(new Room(101, "Conference A"));
-        addRoom(new Room(102, "Conference B"));
-        addRoom(new Room(201, "Huddle Room"));
+        addRoom(new Room(101, "Conference Room"));
+        addRoom(new Room(201, "Meeting Room"));
+        addRoom(new Room(301, "War Room"));
 
         addDevice(new Device("Projector-1", "Projector"));
         addDevice(new Device("AC-1", "AC"));
         addDevice(new Device("Light-1", "Light"));
 
-        addEmployee(new Admin(1, "Raj", "Engineering"));
-        addEmployee(new Manager(2, "Ayan", "Design"));
+        addEmployee(new Admin(1, "Raj", "Engineering", 3, true));
+        addEmployee(new Manager(2, "Ayan", "Design", 2));
         addEmployee(new Employee(3, "Dhruv", "QA"));
         addEmployee(new Employee(4, "Tanvi", "Sales"));
     }
@@ -208,10 +208,36 @@ public class OfficeSystem {
                         Integer roomId = Integer.valueOf(Integer.parseInt(rIdStr)); // wrapper used
                         System.out.println("Enter your name:");
                         String user = scanner.nextLine().trim();
-                        System.out.println("Enter timeslot (e.g., 10:00-11:00) or press Enter for default:");
+                        System.out.println("Enter timeslot (e.g., 10:00-11:00):");
                         String timeslot = scanner.nextLine().trim();
-                        if (timeslot.isEmpty()) bookRoom(roomId.intValue(), user);
-                        else bookRoom(roomId.intValue(), user, timeslot);
+
+                        int roomID_int= roomId.intValue();
+                        Person p= findEmployeeByNameStatic(user);
+                        String role= p.getRole();
+                        switch (roomID_int){
+                            case 101:
+                                if(role!= null){
+                                    if(role.equals("Manager" || role.equals("Admin"))
+                                        bookRoom(roomID_int, user, timeslot);
+                                break;
+                            case 201:
+                                if(role!=null && role.equals("Admin"))
+                                    bookRoom(roomID_int, user, timeslot);
+                                break;
+                            case 301:
+                                if(role!=null && role.equals("Admin")){
+                                    Admin temp= (Admin) p;
+                                    if(temp.isSuperUser())
+                                        bookRoom(roomID_int, user, timeslot);
+                                }
+                                break;
+                                    
+                            default:
+                                throw new AccessUnavailableException("Access Denied.");
+                                    
+                        }
+                        
+                        
                         break;
 
                     case "2": // Toggle devices by name
