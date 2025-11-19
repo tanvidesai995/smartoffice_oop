@@ -2,7 +2,7 @@
 //Implementation without String Builder- check if should implement this
 
 
-   package smartoffice.v1;
+package smartoffice.v1;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
