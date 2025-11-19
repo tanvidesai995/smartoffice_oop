@@ -1,37 +1,68 @@
 package smartoffice.v1;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Scanner;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
 
 /**
- * OfficeSystem - corrected CLI coordinator.
+ * OfficeSystem (array-based) - CLI coordinator rewritten to use arrays.
  *
- * Fixes:
- * - Removed an invalid catch for DeviceOperationException that the compiler flagged.
- * - Keeps handling for BookingException, NumberFormatException, DateTimeParseException, and a generic Exception.
- *
- * Responsibilities:
- * - Rooms, Devices, Employees seeding
- * - Room booking (overloaded methods / varargs)
- * - Device toggling (varargs)
- * - Attendance via RFID (simulateRFIDScan)
- * - Generate daily/weekly/monthly attendance reports
- * - Logging via ConfigManager
- *
- * Short, beginner-friendly methods; no advanced Java constructs.
- *
- * Save as: smartoffice/v1/OfficeSystem.java
- * Addresses rubric items: CLI, overloaded methods, varargs, wrappers, I/O, exception handling, attendance integration
+ * - rooms, devices, employees use manually-resizing arrays
+ * - no List, ArrayList, Collections, Map, or StringBuilder
+ * - uses AttendanceManager and ConfigManager (both assumed present)
  */
 public class OfficeSystem {
-    private static List<Room> rooms = new ArrayList<Room>();
-    private static List<Device> devices = new ArrayList<Device>();
-    private static List<Employee> employees = new ArrayList<Employee>();
+    private static Room[] rooms = new Room[8];
+    private static int roomCount = 0;
+
+    private static Device[] devices = new Device[8];
+    private static int deviceCount = 0;
+
+    private static Employee[] employees = new Employee[8];
+    private static int employeeCount = 0;
+
     private static ConfigManager configManager = new ConfigManager("activity.log");
     private static AttendanceManager attendanceManager = new AttendanceManager("attendance.csv");
+
+    // ---------- dynamic add helpers ----------
+    private static void ensureRoomCapacity() {
+        if (roomCount == rooms.length) {
+            Room[] bigger = new Room[rooms.length * 2];
+            System.arraycopy(rooms, 0, bigger, 0, rooms.length);
+            rooms = bigger;
+        }
+    }
+
+    private static void addRoom(Room r) {
+        ensureRoomCapacity();
+        rooms[roomCount++] = r;
+    }
+
+    private static void ensureDeviceCapacity() {
+        if (deviceCount == devices.length) {
+            Device[] bigger = new Device[devices.length * 2];
+            System.arraycopy(devices, 0, bigger, 0, devices.length);
+            devices = bigger;
+        }
+    }
+
+    private static void addDevice(Device d) {
+        ensureDeviceCapacity();
+        devices[deviceCount++] = d;
+    }
+
+    private static void ensureEmployeeCapacity() {
+        if (employeeCount == employees.length) {
+            Employee[] bigger = new Employee[employees.length * 2];
+            System.arraycopy(employees, 0, bigger, 0, employees.length);
+            employees = bigger;
+        }
+    }
+
+    private static void addEmployee(Employee e) {
+        ensureEmployeeCapacity();
+        employees[employeeCount++] = e;
+    }
 
     // ---------- Booking methods (overloaded / vararg) ----------
     public static void bookRoom(int roomId, String user, String timeSlot) throws BookingException {
@@ -81,9 +112,9 @@ public class OfficeSystem {
 
     // vararg boolean flags to set first N devices
     public static void toggleDevices(boolean... flags) {
-        int n = Math.min(flags.length, devices.size());
+        int n = Math.min(flags.length, deviceCount);
         for (int i = 0; i < n; i++) {
-            Device d = devices.get(i);
+            Device d = devices[i];
             try {
                 if (flags[i]) d.turnOn();
                 else d.turnOff();
@@ -98,47 +129,64 @@ public class OfficeSystem {
 
     // ---------- Helpers for lookups ----------
     public static Employee findEmployeeByIdStatic(int id) {
-        for (Employee e : employees) if (e.getId() == id) return e;
+        for (int i = 0; i < employeeCount; i++) {
+            Employee e = employees[i];
+            if (e != null && e.getId() == id) return e;
+        }
         return null;
     }
 
     public static Employee findEmployeeByNameStatic(String name) {
-        for (Employee e : employees) if (e.getName().equalsIgnoreCase(name)) return e;
+        if (name == null) return null;
+        for (int i = 0; i < employeeCount; i++) {
+            Employee e = employees[i];
+            if (e != null && e.getName().equalsIgnoreCase(name)) return e;
+        }
         return null;
     }
 
     private static Room findRoomById(int id) {
-        for (Room r : rooms) if (r.getRoomId() == id) return r;
+        for (int i = 0; i < roomCount; i++) {
+            Room r = rooms[i];
+            if (r != null && r.getRoomId() == id) return r;
+        }
         return null;
     }
 
     private static Device findDeviceByName(String name) {
-        for (Device d : devices) if (d.getName().equalsIgnoreCase(name)) return d;
+        if (name == null) return null;
+        for (int i = 0; i < deviceCount; i++) {
+            Device d = devices[i];
+            if (d != null && d.getName().equalsIgnoreCase(name)) return d;
+        }
         return null;
     }
 
-    // simple analytics using wrappers
+    // simple analytics replacing Collections usage
     public static double averageDeviceToggles() {
-        if (devices.isEmpty()) return 0.0;
+        if (deviceCount == 0) return 0.0;
         double sum = 0.0;
-        for (Device d : devices) sum += d.getToggles().doubleValue();
-        Double avg = Double.valueOf(sum / devices.size());
+        for (int i = 0; i < deviceCount; i++) {
+            Device d = devices[i];
+            if (d != null) sum += d.getToggles().doubleValue();
+        }
+        Double avg = Double.valueOf(sum / deviceCount);
         return avg.doubleValue();
     }
 
-    // Seed initial demo data
+    // Seed initial demo data (uses addRoom/addDevice/addEmployee)
     private static void seedData() {
-        rooms.add(new Room(101, "Conference A"));
-        rooms.add(new Room(102, "Conference B"));
-        rooms.add(new Room(201, "Huddle Room"));
+        addRoom(new Room(101, "Conference A"));
+        addRoom(new Room(102, "Conference B"));
+        addRoom(new Room(201, "Huddle Room"));
 
-        devices.add(new Device("Projector-1", "Projector"));
-        devices.add(new Device("AC-1", "AC"));
-        devices.add(new Device("Light-1", "Light"));
+        addDevice(new Device("Projector-1", "Projector"));
+        addDevice(new Device("AC-1", "AC"));
+        addDevice(new Device("Light-1", "Light"));
 
-        employees.add(new Employee(1, "Alice", "Engineering"));
-        employees.add(new Employee(2, "Bob", "Design"));
-        employees.add(new Employee(3, "Carol", "QA"));
+        addEmployee(new Employee(1, "Alice", "Engineering"));
+        addEmployee(new Employee(2, "Bob", "Design"));
+        addEmployee(new Employee(3, "Carol", "QA"));
     }
 
     // ---------- Main CLI loop ----------
