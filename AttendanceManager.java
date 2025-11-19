@@ -12,12 +12,13 @@ import java.io.IOException;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 
-
+/**
  * AttendanceManager (array-based): manages attendance records in memory and persists to CSV.
  *
  * - Uses arrays with manual resizing instead of Lists
  * - No Collections, Maps, or StringBuilder
  * - Reports implemented by brute-force scanning (no grouping structures)
+ **/
  
 public class AttendanceManager {
     private String attendanceCsvPath;
