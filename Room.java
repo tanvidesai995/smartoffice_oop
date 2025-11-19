@@ -37,7 +37,7 @@ public class Room {
         return name;
     }
 
-    public List<Booking> getBookings() {
+    public Bookings[] getBookings() {
         return bookings;
     }
 
