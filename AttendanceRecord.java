@@ -74,7 +74,7 @@ public class AttendanceRecord {
             java.time.LocalDateTime ts = java.time.LocalDateTime.parse(parts[4].trim(), FORMATTER);
             return new AttendanceRecord(id, name, method, isCheckIn, ts);
         } catch (Exception e) {
-            throw new ParsingException(
+            throw new ParsingException();
             return null;
         }
     }
