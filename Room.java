@@ -1,8 +1,5 @@
 package smartoffice.v1;
 
-import java.util.ArrayList;
-import java.util.List;
-
 /**
  * Room class with a non-static nested Booking class.
  *
@@ -60,14 +57,17 @@ public class Room {
     // Simple method to cancel a booking
     public boolean cancelBooking(String bookedBy, String timeSlot) {
         Booking toRemove = null;
-        for (Booking b : bookings) {
+        int index=0;
+        for (int i=0;  i<this.bookings.length; i++) {
+            b= this.bookings[i];
             if (b.getBookedBy().equals(bookedBy) && b.getTimeSlot().equals(timeSlot)) {
                 toRemove = b;
+                index=i;
                 break;
             }
         }
         if (toRemove != null) {
-            bookings.remove(toRemove);
+            bookings[i]= null;
             return true;
         }
         return false;
