@@ -233,11 +233,9 @@ public class OfficeSystem {
                                 break;
                                     
                             default:
-                                throw new AccessUnavailableException("Access Denied.");
-                                    
+                                throw new AccessUnavailableException(role);
+                                break;   
                         }
-                        
-                        
                         break;
 
                     case "2": // Toggle devices by name
