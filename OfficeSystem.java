@@ -18,7 +18,7 @@ public class OfficeSystem {
     private static Device[] devices = new Device[8];
     private static int deviceCount = 0;
 
-    private static Employee[] employees = new Employee[8];
+    private static Person[] employees = new Person[8];
     private static int employeeCount = 0;
 
     private static ConfigManager configManager = new ConfigManager("activity.log");
@@ -128,18 +128,18 @@ public class OfficeSystem {
     }
 
     // ---------- Helpers for lookups ----------
-    public static Employee findEmployeeByIdStatic(int id) {
+    public static Person findEmployeeByIdStatic(int id) {
         for (int i = 0; i < employeeCount; i++) {
-            Employee e = employees[i];
+            Person e = employees[i];
             if (e != null && e.getId() == id) return e;
         }
         return null;
     }
 
-    public static Employee findEmployeeByNameStatic(String name) {
+    public static Person findEmployeeByNameStatic(String name) {
         if (name == null) return null;
         for (int i = 0; i < employeeCount; i++) {
-            Employee e = employees[i];
+            Person e = employees[i];
             if (e != null && e.getName().equalsIgnoreCase(name)) return e;
         }
         return null;
@@ -263,8 +263,15 @@ public class OfficeSystem {
                         System.out.println("Enter a date in the week (YYYY-MM-DD):");
                         String wstr = scanner.nextLine().trim();
                         LocalDate wd = LocalDate.parse(wstr);
-                        String weekly = attendanceManager.generateReportWeekly(wd);
-                        System.out.println(weekly);
+                        System.out.println("Enter employee ID (integer):");
+                        String idStr = scanner.nextLine().trim();
+                        int empId = Integer.parseInt(idStr);
+                        if(findEmployeeByIdStatic(empID).getRole().equals("Admin") || findEmployeeByIdStatic(empID).getRole().equals("Manager")){
+                            String weekly = attendanceManager.generateReportWeekly(wd);
+                            System.out.println(weekly);
+                        }
+                        else
+                            System.out.println("Access denied.");
                         break;
 
                     case "13":
@@ -273,8 +280,15 @@ public class OfficeSystem {
                         int year = Integer.parseInt(scanner.nextLine().trim());
                         System.out.println("Enter month (1-12):");
                         int month = Integer.parseInt(scanner.nextLine().trim());
-                        String monthly = attendanceManager.generateReportMonthly(year, month);
-                        System.out.println(monthly);
+                        System.out.println("Enter employee ID (integer):");
+                        String idStr = scanner.nextLine().trim();
+                        int empId = Integer.parseInt(idStr);
+                        if(findEmployeeByIdStatic(empID).getRole().equals("Admin")){
+                            String monthly = attendanceManager.generateReportMonthly(year, month);
+                            System.out.println(monthly);
+                        }
+                        else
+                            System.out.println("Access denied.");
                         break;
 
                     case "5": // Read activity log
