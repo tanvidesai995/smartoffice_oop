@@ -184,9 +184,10 @@ public class OfficeSystem {
         addDevice(new Device("AC-1", "AC"));
         addDevice(new Device("Light-1", "Light"));
 
-        addEmployee(new Employee(1, "Alice", "Engineering"));
-        addEmployee(new Employee(2, "Bob", "Design"));
-        addEmployee(new Employee(3, "Carol", "QA"));
+        addEmployee(new Admin(1, "Raj", "Engineering"));
+        addEmployee(new Manager(2, "Ayan", "Design"));
+        addEmployee(new Employee(3, "Dhruv", "QA"));
+        addEmployee(new Employee(4, "Tanvi", "Sales"));
     }
 
     // ---------- Main CLI loop ----------
@@ -242,13 +243,13 @@ public class OfficeSystem {
                         int empId = Integer.parseInt(idStr);
                         System.out.println("Check-in or Check-out? (in/out):");
                         String inout = scanner.nextLine().trim().toLowerCase();
-                        boolean isIn = inout.startsWith("i");
+                        boolean isIn = inout.equals("in");
                         AttendanceRecord rec1 = attendanceManager.simulateRFIDScan(empId, isIn);
                         configManager.log("ATTEND: " + rec1.describe());
                         System.out.println("Recorded: " + rec1.describe());
                         break;
 
-                    case "12":
+                    case "11":
                         // Generate daily report
                         System.out.println("Enter date for daily report (YYYY-MM-DD):");
                         String dateStr = scanner.nextLine().trim();
@@ -257,7 +258,7 @@ public class OfficeSystem {
                         System.out.println(daily);
                         break;
 
-                    case "13":
+                    case "12":
                         // Generate weekly report: enter any date in that week
                         System.out.println("Enter a date in the week (YYYY-MM-DD):");
                         String wstr = scanner.nextLine().trim();
@@ -266,7 +267,7 @@ public class OfficeSystem {
                         System.out.println(weekly);
                         break;
 
-                    case "14":
+                    case "13":
                         // Generate monthly report
                         System.out.println("Enter year (e.g., 2025):");
                         int year = Integer.parseInt(scanner.nextLine().trim());
@@ -279,11 +280,6 @@ public class OfficeSystem {
                     case "5": // Read activity log
                         System.out.println("Logs:");
                         System.out.println(configManager.readLog());
-                        break;
-
-                    case "6": // Demo bulk booking
-                        System.out.println("Sample booking via bulk vararg: booking user 'Alice' for rooms 101 and 201.");
-                        bookRoom("Alice", 101, 201);
                         break;
 
                     case "0":
@@ -317,12 +313,11 @@ public class OfficeSystem {
         System.out.println("3 - Set first devices states by boolean flags (vararg)");
         System.out.println("4 - Show device toggles average");
         System.out.println("5 - Read activity log");
-        System.out.println("6 - Demo: bulk book rooms for 'Alice' (vararg)");
         System.out.println("--- Attendance (RFID only) ---");
         System.out.println("10 - Simulate RFID check-in/check-out (by employee ID)");
-        System.out.println("12 - Generate daily attendance report (YYYY-MM-DD)");
-        System.out.println("13 - Generate weekly attendance report (enter a date in week)");
-        System.out.println("14 - Generate monthly attendance report (enter year and month)");
+        System.out.println("11 - Generate daily attendance report (YYYY-MM-DD)");
+        System.out.println("12 - Generate weekly attendance report (enter a date in week)");
+        System.out.println("13 - Generate monthly attendance report (enter year and month)");
         System.out.println("0 - Exit");
         System.out.println("Enter choice:");
     }
